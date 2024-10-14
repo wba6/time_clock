@@ -3,21 +3,42 @@ from tkinter import messagebox
 import csv
 import os
 from datetime import datetime
+import sys
+from pathlib import Path
+
+# Function to get the absolute path, works for both dev and PyInstaller
+def get_base_path():
+    """Get the base path of the application."""
+    if getattr(sys, 'frozen', False):
+        # If the application is run as a bundled exe
+        base_path = Path(sys.executable).parent
+    else:
+        # If the application is run as a script
+        base_path = Path(__file__).parent
+    return base_path
+
+# Function to get the path to the CSV file in the same directory as the exe/script
+def get_csv_path():
+    """Get the path for the CSV file in the application's base directory."""
+    base_path = get_base_path()
+    return base_path / 'time_log.csv'
 
 # File where the data will be stored
-CSV_FILE = 'time_log.csv'
+CSV_FILE = get_csv_path()
 
 # Initialize variables
 clock_in_time = None
 
-
 # Function to initialize the CSV file with headers if it doesn't exist
 def initialize_csv():
-    if not os.path.isfile(CSV_FILE):
-        with open(CSV_FILE, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(['Date', 'Clock In', 'Clock Out', 'Duration'])
-
+    try:
+        if not CSV_FILE.is_file():
+            with open(str(CSV_FILE), mode='w', newline='', encoding='utf-8') as file:
+                writer = csv.writer(file)
+                writer.writerow(['Date', 'Clock In', 'Clock Out', 'Duration'])
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to initialize CSV file: {e}")
+        sys.exit(1)
 
 # Function to clock in
 def clock_in():
@@ -29,7 +50,6 @@ def clock_in():
     lbl_status.config(text=f"Clocked in at: {clock_in_time.strftime('%Y-%m-%d %H:%M:%S')}")
     btn_clock_in.config(state=tk.DISABLED)
     btn_clock_out.config(state=tk.NORMAL)
-
 
 # Function to clock out
 def clock_out():
@@ -45,16 +65,19 @@ def clock_out():
     clock_out_str = clock_out_time.strftime('%H:%M:%S')
 
     # Write to CSV
-    with open(CSV_FILE, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        writer.writerow([date_str, clock_in_str, clock_out_str, duration_str])
+    try:
+        with open(str(CSV_FILE), mode='a', newline='', encoding='utf-8') as file:
+            writer = csv.writer(file)
+            writer.writerow([date_str, clock_in_str, clock_out_str, duration_str])
+    except Exception as e:
+        messagebox.showerror("Error", f"Failed to write to CSV file: {e}")
+        return
 
     lbl_status.config(text=f"Clocked out at: {clock_out_time.strftime('%Y-%m-%d %H:%M:%S')}\nDuration: {duration_str}")
     clock_in_time = None
     btn_clock_in.config(state=tk.NORMAL)
     btn_clock_out.config(state=tk.DISABLED)
     messagebox.showinfo("Info", f"Clock out successful!\nDuration: {duration_str}")
-
 
 # Initialize the CSV file
 initialize_csv()
